@@ -98,9 +98,22 @@ const int enemyBulletSpeed = 15;
    スパイク（SPIKE）ゲーム用の変数
    --------------------------------------------------------- */
 float spikePlayerX = 360.0f;       
-int oldSpikePlayerX = 360;         
 const float spikePlayerY = 200.0f; 
 float spikeVelocity = 0.0f;        
+
+/* トゲ（障害物）の管理 */
+const int MAX_OBSTACLES = 5;
+struct Obstacle {
+    float x, y;
+    float speed;
+    int type; /* 0=上壁トゲ(portrait右端), 1=下壁トゲ(portrait左端) */
+    bool active;
+};
+Obstacle obstacles[MAX_OBSTACLES];
+
+/* トゲ用のスプライト（軽量な部分バッファ） */
+M5Canvas spike0Sprite(&M5.Display);
+M5Canvas spike1Sprite(&M5.Display);
 
 /* ---------------------------------------------------------
    サウンド・効果音管理
@@ -202,6 +215,7 @@ void drawTopBar(const char* leftText) {
     M5.Display.drawString(isMuted ? "MUTE" : "SOUND", muteX + 60, BAR_HEIGHT / 2);
     M5.Display.drawRoundRect(shotX, 10, 110, BAR_HEIGHT - 20, 5, TFT_WHITE);
     M5.Display.drawString("SS", shotX + 55, BAR_HEIGHT / 2);
+    M5.Display.drawFastHLine(0, BAR_HEIGHT, M5.Display.width(), TFT_WHITE);
 }
 
 void toggleMute() {
@@ -210,9 +224,9 @@ void toggleMute() {
     int muteX = M5.Display.width() - 120;
     M5.Display.fillRect(muteX, 0, 120, BAR_HEIGHT, TFT_DARKGREY);
     M5.Display.setTextColor(TFT_WHITE, TFT_DARKGREY);
-    M5.Display.setTextDatum(middle_center);
-    M5.Display.setTextSize(2);
+    M5.Display.setTextDatum(middle_center); M5.Display.setTextSize(2);
     M5.Display.drawString(isMuted ? "MUTE" : "SOUND", muteX + 60, BAR_HEIGHT / 2);
+    M5.Display.drawFastHLine(0, BAR_HEIGHT, M5.Display.width(), TFT_WHITE);
 }
 
 void drawGameUI() {
@@ -260,17 +274,20 @@ void initInvader() {
     for (int i = 0; i < MAX_ENEMY_BULLETS; i++) { enemyBullets[i].active = false; }
     M5.Display.fillScreen(TFT_BLACK); drawTopBar(" <- BACK");
     M5.Display.drawFastHLine(0, DEFENSE_LINE_Y, M5.Display.width(), TFT_WHITE);
-    const char* playerDot[10] = { "....WW....", "....WW....", "...WWWW...", "..WWWWWW..", ".WWWWWWWW.", "WWWWWWWWWW", ".WWWWWWWW.", "...WWWW...", "..WW..WW..", ".WW....WW." };
+    
     playerSprite.setColorDepth(16); playerSprite.createSprite(playerW, playerH);
     playerSprite.fillScreen(TFT_BLACK);
+    const char* playerDot[10] = { "....WW....", "....WW....", "...WWWW...", "..WWWWWW..", ".WWWWWWWW.", "WWWWWWWWWW", ".WWWWWWWW.", "...WWWW...", "..WW..WW..", ".WW....WW." };
     for (int y = 0; y < 10; y++) { for (int x = 0; x < 10; x++) { if (playerDot[y][x] == 'W') playerSprite.fillRect(x * 5, y * 5, 5, 5, TFT_WHITE); } }
     drawGameUI();
     playerX = M5.Display.width() / 2; oldPlayerX = playerX;
     playerSprite.pushSprite(playerX - playerW / 2, playerY);
+    
     const char* enemyDot[10] = { "....RR....", "...RRRR...", "..RRRRRR..", ".RR.RR.RR.", "RRRRRRRRRR", "R.RRRRRR.R", "R.R....R.R", "...RRRR...", "..R....R..", ".R......R." };
     enemySprite.setColorDepth(16); enemySprite.createSprite(ENEMY_W, ENEMY_H);
     enemySprite.fillScreen(TFT_BLACK);
     for (int y = 0; y < 10; y++) { for (int x = 0; x < 10; x++) { if (enemyDot[y][x] == 'R') enemySprite.fillRect(x * 4, y * 4, 4, 4, TFT_RED); } }
+    
     activeEnemyRows = currentStage; if (activeEnemyRows > ENEMY_ROWS) activeEnemyRows = ENEMY_ROWS;
     activeEnemyCols = 4 + currentStage; if (activeEnemyCols > ENEMY_COLS) activeEnemyCols = ENEMY_COLS;
     enemiesRemaining = activeEnemyRows * activeEnemyCols;
@@ -285,9 +302,6 @@ void initSpike() {
     drawLoadingScreen("Now Loading SPIKE...");
     M5.Display.fillScreen(TFT_BLACK);
     
-    /* ---------------------------------------------------------
-       横持ちアナウンス画面（自動センタリング）
-       --------------------------------------------------------- */
     bool drawSuccess = false;
     File imgFile = SD.open("/Rotate.png");
     int imgW = 600; int imgH = 327;
@@ -311,42 +325,61 @@ void initSpike() {
        SPIKEゲームの初期設定
        --------------------------------------------------------- */
     spikePlayerX = M5.Display.width() / 2;
-    oldSpikePlayerX = (int)spikePlayerX;
     spikeVelocity = 0.0f;
+    isGameOver = false; 
+    score = 0; /* 生存時間スコアのリセット */
+    
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
+        obstacles[i].active = false;
+    }
+    
     M5.Display.fillScreen(TFT_BLACK);
     drawTopBar(" <- BACK");
 
-    /* ---------------------------------------------------------
-       【完全新規】最初から「下方向」を向いた鳥さんのドット絵
-       '.'は透明、'W'は白（胴体・羽）、'Y'は黄色（くちばし）、'K'は黒（目）
-       縦持ちで下向き＝横持ちで右向きになるデザイン
-       --------------------------------------------------------- */
     const char* spikePlayerDot[10] = { 
-        "....WW....", // 1: 尾羽
-        "...WWWW...", // 2: 胴体開始
-        "..WWWWWW..", // 3: 胴体
-        "WWWWWWWWWW", // 4: 大きく広げた羽のライン
-        "WWWWWWWWWW", // 5: 羽の厚み
-        "..WWWWWW..", // 6: 胴体に戻る
-        "..WWKKWW..", // 7: 顔（Kが目）
-        "...WWWW...", // 8: 顔の下部
-        "....YY....", // 9: くちばし（真っ直ぐ下＝右を向く！）
-        "....YY...."  // 10:くちばしの先
+        "....WW....", 
+        "...WWWW...", 
+        "..WWWWWW..", 
+        "WWWWWWWWWW", 
+        "WWWWWWWWWW", 
+        "..WWWWWW..", 
+        "..WWKKWW..", 
+        "...WWWW...", 
+        "....YY....", 
+        "....YY...."  
     };
     
     playerSprite.setColorDepth(16); 
-    playerSprite.createSprite(playerW, playerH);
+    playerSprite.createSprite(70, 50);
     playerSprite.fillScreen(TFT_BLACK);
     
     for (int y = 0; y < 10; y++) { 
         for (int x = 0; x < 10; x++) { 
-            if (spikePlayerDot[y][x] == 'W') playerSprite.fillRect(x * 5, y * 5, 5, 5, TFT_WHITE); 
-            else if (spikePlayerDot[y][x] == 'Y') playerSprite.fillRect(x * 5, y * 5, 5, 5, TFT_YELLOW); 
-            else if (spikePlayerDot[y][x] == 'K') playerSprite.fillRect(x * 5, y * 5, 5, 5, TFT_BLACK); 
+            if (spikePlayerDot[y][x] == 'W') playerSprite.fillRect(x * 5 + 10, y * 5, 5, 5, TFT_WHITE); 
+            else if (spikePlayerDot[y][x] == 'Y') playerSprite.fillRect(x * 5 + 10, y * 5, 5, 5, TFT_YELLOW); 
+            else if (spikePlayerDot[y][x] == 'K') playerSprite.fillRect(x * 5 + 10, y * 5, 5, 5, TFT_BLACK); 
         } 
     }
-    
-    playerSprite.pushSprite((int)spikePlayerX - playerW / 2, (int)spikePlayerY - playerH / 2);
+
+    /* 【修正】トゲの長さを画面中央を少し超えるサイズに計算 */
+    int spikeW = M5.Display.width() / 2 + 40; 
+
+    if (spike0Sprite.width() != spikeW) {
+        spike0Sprite.deleteSprite();
+        spike0Sprite.setColorDepth(16);
+        spike0Sprite.createSprite(spikeW, 95);
+        spike0Sprite.fillScreen(TFT_BLACK);
+        /* 右壁から突き出るトゲ（先端がX=0） */
+        spike0Sprite.fillTriangle(0, 40, spikeW, 0, spikeW, 80, TFT_RED);
+    }
+    if (spike1Sprite.width() != spikeW) {
+        spike1Sprite.deleteSprite();
+        spike1Sprite.setColorDepth(16);
+        spike1Sprite.createSprite(spikeW, 95);
+        spike1Sprite.fillScreen(TFT_BLACK);
+        /* 左壁から突き出るトゲ（先端がX=spikeW） */
+        spike1Sprite.fillTriangle(spikeW, 40, 0, 0, 0, 80, TFT_RED);
+    }
 }
 
 /* ---------------------------------------------------------
@@ -437,18 +470,136 @@ void INVADER() {
 }
 
 void SPIKE() {
+    if (isGameOver) {
+        if (M5.Touch.getCount() > 0) {
+            auto t = M5.Touch.getDetail();
+            if (t.wasPressed()) {
+                int tx = t.x; int ty = t.y;
+                int muteX = M5.Display.width() - 120; int shotX = muteX - 130;
+                if (ty <= BAR_HEIGHT) { 
+                    if (tx >= muteX) toggleMute(); 
+                    else if (tx >= shotX && tx < muteX) takeScreenshot(); 
+                    else { playDecisionSound(); currentState = STATE_MENU; drawMenu(); } 
+                } else { 
+                    playDecisionSound(); 
+                    initSpike(); 
+                }
+            }
+        }
+        return; 
+    }
+
     bool isUI = false;
     if (M5.Touch.getCount() > 0) {
         auto t = M5.Touch.getDetail(); int tx = t.x; int ty = t.y;
         int muteX = M5.Display.width() - 120; int shotX = muteX - 130;
         if (ty <= BAR_HEIGHT) { isUI = true; if (t.wasPressed()) { if (tx >= muteX) toggleMute(); else if (tx >= shotX && tx < muteX) takeScreenshot(); else { playDecisionSound(); currentState = STATE_MENU; drawMenu(); return; } } }
     }
+    
     if (M5.Touch.getCount() > 0 && !isUI) spikeVelocity += 0.8f; else spikeVelocity -= 0.8f;
     if (spikeVelocity > 10.0f) spikeVelocity = 10.0f; if (spikeVelocity < -10.0f) spikeVelocity = -10.0f;
     spikePlayerX += spikeVelocity;
     if (spikePlayerX < playerW / 2) { spikePlayerX = playerW / 2; spikeVelocity = 0; }
     if (spikePlayerX > M5.Display.width() - playerW / 2) { spikePlayerX = M5.Display.width() - playerW / 2; spikeVelocity = 0; }
-    if ((int)spikePlayerX != oldSpikePlayerX) { M5.Display.fillRect(oldSpikePlayerX - playerW / 2, (int)spikePlayerY - playerH / 2, playerW, playerH, TFT_BLACK); playerSprite.pushSprite((int)spikePlayerX - playerW / 2, (int)spikePlayerY - playerH / 2); oldSpikePlayerX = (int)spikePlayerX; }
+
+    /* 【新規】スコア（生存時間）を加算 */
+    score++;
+    
+    /* スコアに応じて発生間隔をどんどん狭くしていく */
+    int minDistance = 400 - (score / 15);
+    if (minDistance < 180) minDistance = 180; /* 最低でもこのスキマは確保 */
+    
+    /* スコアに応じてトゲの速度を少しずつアップ */
+    float currentSpikeSpeed = 10.0f + (score / 500.0f);
+    if (currentSpikeSpeed > 25.0f) currentSpikeSpeed = 25.0f; /* 限界速度 */
+
+    /* スコアに応じてトゲの発生確率もアップ */
+    int spawnRate = 5 + (score / 300);
+    if (spawnRate > 20) spawnRate = 20;
+
+    bool canSpawn = true;
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
+        if (obstacles[i].active && obstacles[i].y > M5.Display.height() - minDistance) {
+            canSpawn = false; 
+            break;
+        }
+    }
+
+    if (canSpawn && random(0, 100) < spawnRate) {
+        for (int i = 0; i < MAX_OBSTACLES; i++) {
+            if (!obstacles[i].active) {
+                obstacles[i].active = true;
+                obstacles[i].type = random(0, 2);
+                obstacles[i].y = M5.Display.height() + 50;
+                obstacles[i].speed = currentSpikeSpeed; /* 時間経過で上がったスピードをセット */
+                break;
+            }
+        }
+    }
+
+    int spikeW = M5.Display.width() / 2 + 40; 
+    bool hit = false;
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
+        if (obstacles[i].active && obstacles[i].y >= BAR_HEIGHT) {
+            float ox = (obstacles[i].type == 0) ? M5.Display.width() - spikeW : spikeW;
+            float oy = obstacles[i].y;
+            /* 厳密な当たり判定（スレスレを狙えるように少し甘め） */
+            if (spikePlayerY > oy - 35 && spikePlayerY < oy + 35) {
+                if (obstacles[i].type == 0) { 
+                    /* 右からのトゲ */
+                    if (spikePlayerX + 15 > ox) hit = true;
+                } else { 
+                    /* 左からのトゲ */
+                    if (spikePlayerX - 15 < ox) hit = true;
+                }
+            }
+        }
+    }
+
+    if (hit) {
+        isGameOver = true;
+        playHitSound();
+        M5.Display.clearClipRect(); 
+        M5.Display.fillRect(0, BAR_HEIGHT + 1, M5.Display.width(), M5.Display.height() - BAR_HEIGHT - 1, TFT_BLACK); 
+        M5.Display.setTextColor(TFT_RED, TFT_BLACK); 
+        M5.Display.setTextDatum(middle_center); 
+        M5.Display.setTextSize(5); 
+        M5.Display.drawString("GAME OVER", M5.Display.width() / 2, M5.Display.height() / 2 - 40); 
+        M5.Display.setTextColor(TFT_YELLOW, TFT_BLACK); 
+        M5.Display.setTextSize(3); 
+        char resultText[32]; 
+        sprintf(resultText, "SCORE: %05d", score); 
+        M5.Display.drawString(resultText, M5.Display.width() / 2, M5.Display.height() / 2 + 10); 
+        M5.Display.setTextColor(TFT_WHITE, TFT_BLACK); 
+        M5.Display.setTextSize(2); 
+        M5.Display.drawString("Tap to RESTART", M5.Display.width() / 2, M5.Display.height() / 2 + 60); 
+        playGameOverSound(); 
+        return;
+    }
+
+    M5.Display.startWrite();
+    M5.Display.setClipRect(0, BAR_HEIGHT + 1, M5.Display.width(), M5.Display.height() - BAR_HEIGHT - 1);
+
+    for (int i = 0; i < MAX_OBSTACLES; i++) {
+        if (obstacles[i].active) {
+            obstacles[i].y -= obstacles[i].speed;
+            
+            if (obstacles[i].y < BAR_HEIGHT - 100) {
+                obstacles[i].active = false;
+            } else {
+                if (obstacles[i].type == 0) {
+                    spike0Sprite.pushSprite(M5.Display.width() - spikeW, (int)obstacles[i].y - 40);
+                } else {
+                    spike1Sprite.pushSprite(0, (int)obstacles[i].y - 40);
+                }
+            }
+        }
+    }
+
+    playerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
+    
+    M5.Display.clearClipRect();
+    M5.Display.endWrite();
 }
 
 void setup() {
