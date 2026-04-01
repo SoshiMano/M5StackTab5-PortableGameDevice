@@ -140,7 +140,7 @@ flowchart TD
 - `Invader.h` / `Invader.cpp` : 『INVADER』のゲームロジックおよび描画処理。
 - `Spike.h` / `Spike.cpp` : 『SPIKE』のゲームロジックおよび描画処理.。
 
-## プレイデモ
+## プレイデモ(BGM/SE：魔王魂)
 
 <p align="center" width="100%">
     <video src="https://github.com/user-attachments/assets/85ce7aaa-d420-4067-ad82-a9aa3690278d" width="80%" controls></video>
