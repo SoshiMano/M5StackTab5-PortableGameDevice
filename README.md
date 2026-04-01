@@ -25,16 +25,16 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 
 ## 必要なファイル (SDカード)
 
-プログラムを実行する際、SDカードのルートディレクトリに以下のWAVファイルおよび画像ファイルを配置すること。
+プログラムを実行する際、SDカードのルートディレクトリに任意のWAVファイルおよび画像ファイルを下記の通りに改名して配置すること。
 
-- `BGM_Menu.wav`
-- `SE_INVADE_Laser.wav`
-- `SE_INVADE_Blast.wav`
-- `SE_INVADE_Move.wav`
-- `BGM_SPIKE.wav`
-- `SE_SPIKE_Blast.wav`
-- `SE_Gameover.wav`
-- `Rotate.png`
+- `BGM_Menu.wav`:メインメニューのBGM。する
+- `SE_INVADE_Laser.wav`：INVADERのレーザー発射SE
+- `SE_INVADE_Blast.wav`：INVADERの被弾SE
+- `SE_INVADE_Move.wav`：INVADERの敵移動SE
+- `BGM_SPIKE.wav`：SPIKEのBGM。ループする
+- `SE_SPIKE_Blast.wav`：SPIKEの被弾SE
+- `SE_Gameover.wav`：ゲームオーバー時のジングル
+- `Rotate.png`：Main内に同梱済み
 
 ## 操作方法
 
