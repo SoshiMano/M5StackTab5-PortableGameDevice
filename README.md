@@ -142,8 +142,10 @@ flowchart TD
 
 ## プレイデモ
 
-<video> src="https://github.com/user-attachments/assets/85ce7aaa-d420-4067-ad82-a9aa3690278d" width="320" height="240" controls></video>
+<p align="center" width="100%">
 
-<video> src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="320" height="240" controls></video>
+    <video src="https://github.com/user-attachments/assets/85ce7aaa-d420-4067-ad82-a9aa3690278d" width="80%" controls></video>
+    
+    <video src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="80%" controls></video>
 
-
+</p>
