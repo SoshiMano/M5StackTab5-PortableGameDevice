@@ -142,8 +142,8 @@ flowchart TD
 
 ## プレイデモ
 
-<video src="PlayDemo_Invader.mp4" width="320" height="240" controls></video>
+<video> src="PlayDemo_Invader.mp4" width="320" height="240" controls></video>
 
-<video src="PlayDemo_Spike.mp4" width="320" height="240" controls></video>
+<video> src="PlayDemo_Spike.mp4" width="320" height="240" controls></video>
 
 
