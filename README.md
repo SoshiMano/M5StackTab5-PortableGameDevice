@@ -1,7 +1,8 @@
 # M5StackTab5-PortableGameDevice
 
 ## 概要
-M5Stackを使用して開発した、携帯型ゲームデバイスおよびミニゲーム集である。
+
+M5StackTab5を使用して開発した、携帯型ゲームデバイスおよびミニゲーム集である。
 現在はシューティングゲーム『INVADER』と、デバイスの向きを変えて遊ぶアクションゲーム『SPIKE』の2種類を収録している。
 M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、SDカードからの音声再生、スクリーンショット機能などを実装している。
 
@@ -16,7 +17,7 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 
 ## 動作環境・依存ライブラリ
 
-- ハードウェア: M5Stack (M5Stack Tab5 等、タッチパネルおよびSDカードスロット搭載機種)
+- ハードウェア: M5StackTab5
 - 開発環境: Arduino IDE
 - 依存ライブラリ:
   - M5Unified
@@ -33,7 +34,7 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 - `BGM_SPIKE.wav`
 - `SE_SPIKE_Blast.wav`
 - `SE_Gameover.wav`
-- `Rotate.png` (SPIKE起動時の画面回転指示用画像)
+- `Rotate.png` 
 
 ## 操作方法
 
@@ -41,15 +42,22 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 
 ### メインメニュー
 
+
+1[Menu](SS_Menu)
+
 - 『INVADER』 / 『SPIKE』 のボタンをタップして各ゲームを起動する。
 - 画面上部のトップバーからミュート設定、およびスクリーンショットの撮影が可能。
 
 ### INVADER
 
+![INVADER](SS_INVADER)
+
 - 画面下部をタッチ＆スライド: 自機の左右移動
 - 画面下部をタップして離す: 弾を発射
 
 ### SPIKE
+
+![SPIKE](SS_SPIKE)
 
 - ゲーム開始時に画面の指示に従い、デバイスを横向きに持ち替える。
 - TAP TO START の表示後、画面をタップしてゲーム開始。
@@ -63,4 +71,3 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 - `Main.ino` : システムの初期化、メインループ、メニュー画面UI、音声・画像等の共通処理。
 - `Invader.h` / `Invader.cpp` : 『INVADER』のゲームロジックおよび描画処理。
 - `Spike.h` / `Spike.cpp` : 『SPIKE』のゲームロジックおよび描画処理.。
-- 
