@@ -75,6 +75,32 @@ flowchart TD
 - 画面下部をタッチ＆スライド: 自機の左右移動
 - 画面下部をタップして離す: 弾を発射
 
+```mermaid
+flowchart TD
+    Start([ゲーム起動]) --> Init[初期化処理]
+    Init --> Title[タイトル画面表示]
+    Title --> WaitInput{入力待機}
+    WaitInput -->|スタート| GameStart[ゲーム開始]
+    
+    GameStart --> GameLoop((ゲームループ))
+    
+    GameLoop --> PlayerAction[自機の移動・弾の発射]
+    GameLoop --> EnemyAction[敵の移動・弾の発射]
+    GameLoop --> Collision[当たり判定処理]
+    
+    Collision --> CheckState{状態判定}
+    CheckState -->|敵全滅| LevelUp[レベルアップ・次ウェーブへ]
+    LevelUp --> GameLoop
+    CheckState -->|自機被弾| PlayerHit[残機減少]
+    
+    PlayerHit --> CheckGameOver{残機ゼロ？}
+    CheckGameOver -->|No| Restart[リスタート処理]
+    Restart --> GameLoop
+    CheckGameOver -->|Yes| GameOver[ゲームオーバー画面表示]
+    
+    GameOver --> Result[スコア表示]
+    Result --> Title
+```
 ### SPIKE
 
 ![SPIKE](SS_SPIKE.jpeg)
@@ -83,6 +109,28 @@ flowchart TD
 - TAP TO START の表示後、画面をタップしてゲーム開始。
 - 画面の任意の場所をタップ: プレイヤー(鳥)がジャンプ(上昇)。重力に従って落下するため、タイミングよくタップして障害物を避ける。
 - 画面左下(横持ち時の配置)をタップしてメインメニューへ戻る。
+
+```mermaid
+flowchart TD
+    Start([ゲーム起動]) --> Init[初期化処理]
+    Init --> Title[タイトル画面表示]
+    Title --> WaitInput{入力待機}
+    WaitInput -->|スタート| GameStart[ゲーム開始]
+    
+    GameStart --> GameLoop((ゲームループ))
+    
+    GameLoop --> PlayerMove[プレイヤーの操作・移動]
+    GameLoop --> SpikeSpawn[スパイクの生成・移動]
+    GameLoop --> Collision[当たり判定処理]
+    
+    Collision --> CheckHit{被弾判定}
+    CheckHit -->|回避成功| AddScore[スコア加算]
+    AddScore --> GameLoop
+    CheckHit -->|スパイク接触| GameOver[ゲームオーバー画面表示]
+    
+    GameOver --> Result[スコア表示]
+    Result --> Title
+```
 
 ## ディレクトリ・ファイル構成
 
