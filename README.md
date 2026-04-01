@@ -42,21 +42,21 @@ M5UnifiedおよびM5GFXライブラリを活用し、タッチパネル操作、
 
 ### メインメニュー
 
-1[Menu](SS_Menu)
+![Menu](SS_Menu.bmp)
 
 - 『INVADER』 / 『SPIKE』 のボタンをタップして各ゲームを起動する。
 - 画面上部のトップバーからミュート設定、およびスクリーンショットの撮影が可能。
 
 ### INVADER
 
-![INVADER](SS_INVADER)
+![INVADER](SS_INVADER.bmp)
 
 - 画面下部をタッチ＆スライド: 自機の左右移動
 - 画面下部をタップして離す: 弾を発射
 
 ### SPIKE
 
-![SPIKE](SS_SPIKE)
+![SPIKE](SS_SPIKE.jpeg)
 
 - ゲーム開始時に画面の指示に従い、デバイスを横向きに持ち替える。
 - TAP TO START の表示後、画面をタップしてゲーム開始。
