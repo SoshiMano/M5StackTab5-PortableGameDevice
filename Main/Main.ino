@@ -1,3 +1,4 @@
+/* M5Stackの基本機能とSDカード用のライブラリを読み込む */
 #include <M5Unified.h>
 #include <SD.h>
 #include "Invader.h"
@@ -6,26 +7,28 @@
 /* ---------------------------------------------------------
    ゲームの状態管理
    --------------------------------------------------------- */
+/* 現在どの画面にいるかを管理するための列挙型（インベーダーのヘッダで定義済み） */
 SystemState currentState = STATE_MENU;
 
 /* ---------------------------------------------------------
    レイアウト・設定用の定数
    --------------------------------------------------------- */
-const int BAR_HEIGHT = 80;       
-const int BUTTON_WIDTH = 400;    
-const int BUTTON_HEIGHT = 150;   
-const int BUTTON_X = 160;        
+const int BAR_HEIGHT = 80;       // 上部のメニューバーの高さ
+const int BUTTON_WIDTH = 400;    // メニュー画面のボタンの幅
+const int BUTTON_HEIGHT = 150;   // メニュー画面のボタンの高さ
+const int BUTTON_X = 160;        // メニュー画面のボタンのX座標
 
 /* ---------------------------------------------------------
    ステージ・進行管理用の変数（共通）
    --------------------------------------------------------- */
-bool isGameOver = false;         
-int score = 0;
-int lives = 2; 
+bool isGameOver = false;         // ゲームオーバー状態かどうかの判定フラグ
+int score = 0;                   // プレイヤーのスコア
+int lives = 2;                   // プレイヤーの残機
 
 /* ---------------------------------------------------------
    サウンド・効果音管理
    --------------------------------------------------------- */
+/* SDカードから読み込んだ音声データを格納するためのポインタとサイズ */
 uint8_t* wav_buffer = nullptr;   
 size_t wav_size = 0;
 uint8_t* wav_laser = nullptr;    
@@ -42,12 +45,13 @@ size_t size_spike_blast = 0;
 uint8_t* wav_gameover = nullptr;    
 size_t size_gameover = 0;
 
-bool isMuted = false;            
-int currentVolume = 128;         
+bool isMuted = false;            // ミュート状態かどうかのフラグ
+int currentVolume = 128;         // 現在の音量
 
 /* ---------------------------------------------------------
-   共通関数
+   共通関数（音声再生）
    --------------------------------------------------------- */
+/* ミュートでなければ対応するWAVファイルを再生する関数群 */
 void playShootSound() { if (wav_laser && !isMuted) M5.Speaker.playWav(wav_laser, size_laser, 1, 1); }
 void playHitSound() { if (wav_blast && !isMuted) M5.Speaker.playWav(wav_blast, size_blast, 1, 2); }
 void playEnemyMoveSound() { if (wav_move && !isMuted) M5.Speaker.playWav(wav_move, size_move, 1, 3); }
@@ -55,10 +59,15 @@ void playEnemyShootSound() { if (wav_laser && !isMuted) M5.Speaker.playWav(wav_l
 void playSpikeHitSound() { if (wav_spike_blast && !isMuted) M5.Speaker.playWav(wav_spike_blast, size_spike_blast, 1, 2); else playHitSound(); }
 void playGameOverSound() { if (wav_gameover && !isMuted) M5.Speaker.playWav(wav_gameover, size_gameover, 1, 5); else if(!isMuted) M5.Speaker.tone(300, 500); }
 
+/* 単純なビープ音（BEEP）を鳴らす関数群 */
 void playTapSound() { if(!isMuted) M5.Speaker.tone(1000, 50); }
 void playDecisionSound() { if(!isMuted) M5.Speaker.tone(2000, 100); }
 void playCameraSound() { if(!isMuted) M5.Speaker.tone(2500, 100); } 
 
+/* ---------------------------------------------------------
+   ユーティリティ関数
+   --------------------------------------------------------- */
+/* ロード画面を描画する関数 */
 void drawLoadingScreen(const char* message) {
     M5.Display.fillScreen(TFT_BLACK);
     M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -68,6 +77,7 @@ void drawLoadingScreen(const char* message) {
     delay(50);
 }
 
+/* SDカードからWAVファイルをメモリ(PSRAM)に読み込む関数 */
 uint8_t* loadWavFile(const char* path, size_t* out_size) {
     File file = SD.open(path);
     if (!file) return nullptr;
@@ -81,21 +91,29 @@ uint8_t* loadWavFile(const char* path, size_t* out_size) {
 /* ---------------------------------------------------------
    スクリーンショット機能
    --------------------------------------------------------- */
+/* 現在のディスプレイの描画内容をBMP形式でSDカードに保存する関数 */
 void takeScreenshot() {
-    M5.Speaker.stop(0);
+    M5.Speaker.stop(0); // 撮影時のノイズ防止のため音声を一時停止
     int w = M5.Display.width();
     int h = M5.Display.height();
     char filename[32];
+    
+    // 連番で空いているファイル名を検索
     for (int i = 0; i < 1000; i++) {
         sprintf(filename, "/SHOT_%03d.bmp", i);
         if (!SD.exists(filename)) break;
     }
+    
     File f = SD.open(filename, FILE_WRITE);
     if (!f) { playGameOverSound(); return; }
+    
+    // BMPヘッダの作成と書き込み
     uint32_t rowSize = (w * 3 + 3) & ~3; 
     uint32_t fileSize = 54 + (rowSize * h);
     uint8_t header[54] = { 'B','M', (uint8_t)fileSize, (uint8_t)(fileSize>>8), (uint8_t)(fileSize>>16), (uint8_t)(fileSize>>24), 0,0, 0,0, 54,0,0,0, 40,0,0,0, (uint8_t)w, (uint8_t)(w>>8), (uint8_t)(w>>16), (uint8_t)(w>>24), (uint8_t)h, (uint8_t)(h>>8), (uint8_t)(h>>16), (uint8_t)(h>>24), 1,0, 24,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
     f.write(header, 54);
+    
+    // 画面下部から1行ずつピクセルデータを取得して書き込み（RGBをBGRに変換）
     uint8_t* buffer = (uint8_t*)ps_malloc(rowSize);
     if (buffer) {
         for (int y = h - 1; y >= 0; y--) {
@@ -115,17 +133,22 @@ void takeScreenshot() {
 /* ---------------------------------------------------------
    UI描画機能
    --------------------------------------------------------- */
+/* 画面上部のステータスバー（戻るボタンやミュートボタン）を描画する */
 void drawTopBar(const char* leftText) {
     M5.Display.fillRect(0, 0, M5.Display.width(), BAR_HEIGHT, TFT_DARKGREY);
     M5.Display.setTextColor(TFT_WHITE, TFT_DARKGREY);
     M5.Display.setTextDatum(middle_left); 
     M5.Display.setTextSize(3);
     M5.Display.drawString(leftText, 10, BAR_HEIGHT / 2);
+    
+    // インベーダーゲーム中なら中央にステージ数を表示
     if (currentState == STATE_INVADER) {
         M5.Display.setTextDatum(middle_center);
         char stageText[32]; sprintf(stageText, "STAGE %d", currentStage);
         M5.Display.drawString(stageText, M5.Display.width() / 2, BAR_HEIGHT / 2);
     }
+    
+    // 右側のボタン群（ミュート、スクショ）の描画
     int muteX = M5.Display.width() - 120;
     int shotX = muteX - 130;
     M5.Display.setTextDatum(middle_center); M5.Display.setTextSize(2);
@@ -135,6 +158,7 @@ void drawTopBar(const char* leftText) {
     M5.Display.drawFastHLine(0, BAR_HEIGHT, M5.Display.width(), TFT_WHITE);
 }
 
+/* ミュート状態を切り替える関数 */
 void toggleMute() {
     isMuted = !isMuted;
     M5.Speaker.setVolume(isMuted ? 0 : currentVolume);
@@ -147,34 +171,52 @@ void toggleMute() {
 }
 
 /* ---------------------------------------------------------
-   メニュー描画
+   メニュー画面処理
    --------------------------------------------------------- */
+/* タイトルメニューの描画 */
 void drawMenu() {
     M5.Speaker.stop(0); 
     M5.Display.fillScreen(TFT_BLACK);
     drawTopBar(" MAIN MENU");
+    
     M5.Display.fillRoundRect(BUTTON_X, 200, BUTTON_WIDTH, BUTTON_HEIGHT, 15, TFT_BLUE);
     M5.Display.setTextColor(TFT_WHITE); M5.Display.setTextDatum(middle_center); M5.Display.setTextSize(3);
     M5.Display.drawString("INVADER", BUTTON_X + BUTTON_WIDTH / 2, 200 + BUTTON_HEIGHT / 2);
+    
     M5.Display.fillRoundRect(BUTTON_X, 450, BUTTON_WIDTH, BUTTON_HEIGHT, 15, TFT_RED);
     M5.Display.drawString("SPIKE", BUTTON_X + BUTTON_WIDTH / 2, 450 + BUTTON_HEIGHT / 2);
 }
 
-/* ---------------------------------------------------------
-   メインループ
-   --------------------------------------------------------- */
+/* メニュー画面のタッチ判定と処理 */
 void MAINMENU() {
+    // BGMのループ再生
     if (wav_buffer != nullptr && !M5.Speaker.isPlaying(0) && !isMuted) { M5.Speaker.playWav(wav_buffer, wav_size, ~0u, 0); }
+    
+    // タッチ入力の処理
     if (M5.Touch.getCount() > 0) {
         auto t = M5.Touch.getDetail();
         if (t.wasPressed()) {
             int tx = t.x; int ty = t.y; bool isBtn = false;
             int muteX = M5.Display.width() - 120; int shotX = muteX - 130;
-            if (ty <= BAR_HEIGHT) { isBtn = true; if (tx >= muteX) toggleMute(); else if (tx >= shotX && tx < muteX) takeScreenshot(); }
+            
+            // トップバーのタップ判定
+            if (ty <= BAR_HEIGHT) { 
+                isBtn = true; 
+                if (tx >= muteX) toggleMute(); 
+                else if (tx >= shotX && tx < muteX) takeScreenshot(); 
+            }
+            // 各ゲームのボタンのタップ判定
             else {
                 if (tx >= BUTTON_X && tx <= BUTTON_X + BUTTON_WIDTH) {
-                    if (ty >= 200 && ty <= 200 + BUTTON_HEIGHT) { isBtn = true; playDecisionSound(); currentStage = 1; score = 0; lives = 2; currentState = STATE_INVADER; initInvader(); }
-                    else if (ty >= 450 && ty <= 450 + BUTTON_HEIGHT) { isBtn = true; playDecisionSound(); currentState = STATE_SPIKE; initSpike(); }
+                    if (ty >= 200 && ty <= 200 + BUTTON_HEIGHT) { 
+                        isBtn = true; playDecisionSound(); 
+                        currentStage = 1; score = 0; lives = 2; 
+                        currentState = STATE_INVADER; initInvader(); 
+                    }
+                    else if (ty >= 450 && ty <= 450 + BUTTON_HEIGHT) { 
+                        isBtn = true; playDecisionSound(); 
+                        currentState = STATE_SPIKE; initSpike(); 
+                    }
                 }
             }
             if (!isBtn) playTapSound();
@@ -182,9 +224,15 @@ void MAINMENU() {
     }
 }
 
+/* ---------------------------------------------------------
+   プログラムの起点
+   --------------------------------------------------------- */
 void setup() {
+    // M5Stackの初期化と音量設定
     auto cfg = M5.config(); M5.begin(cfg); M5.Display.setRotation(0); M5.Speaker.setVolume(currentVolume);
     drawLoadingScreen("Now Loading...");
+    
+    // SDカードから音声ファイルを読み込む
     if (SD.begin()) { 
         wav_buffer = loadWavFile("/BGM_Menu.wav", &wav_size); 
         wav_laser = loadWavFile("/SE_INVADE_Laser.wav", &size_laser); 
@@ -194,12 +242,15 @@ void setup() {
         wav_spike_blast = loadWavFile("/SE_SPIKE_Blast.wav", &size_spike_blast);
         wav_gameover = loadWavFile("/SE_Gameover.wav", &size_gameover);
     }
-    randomSeed(millis());
+    randomSeed(millis()); // 乱数の初期化
     drawMenu();
 }
 
+/* 常時実行されるメインループ */
 void loop() {
-    M5.update();
+    M5.update(); // タッチパネル等の状態を更新
+    
+    // 現在のステート（画面状態）に応じて各処理を呼び出す
     switch (currentState) {
         case STATE_MENU: MAINMENU(); break;
         case STATE_INVADER: INVADER(); break;

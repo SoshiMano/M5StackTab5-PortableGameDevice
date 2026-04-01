@@ -4,23 +4,26 @@
 /* ---------------------------------------------------------
    スパイク（SPIKE）ゲーム用の変数
    --------------------------------------------------------- */
-float spikePlayerX = 360.0f;       
-float oldSpikePlayerX = 360.0f;         
-const float spikePlayerY = 200.0f; 
-float spikeVelocity = 0.0f;        
-bool isSpikeStarted = false; 
+/* M5StackのRotationを0(縦)のまま扱うため、X軸が重力方向(上下)、Y軸が左右となる */
+float spikePlayerX = 360.0f;       // 鳥の上下位置
+float oldSpikePlayerX = 360.0f;    // 差分描画用の過去位置     
+const float spikePlayerY = 200.0f; // 鳥の横位置（左側に固定）
+float spikeVelocity = 0.0f;        // 鳥の落下/上昇速度
+bool isSpikeStarted = false;       // ゲームが開始されたかどうかのフラグ
 
 const int MAX_OBSTACLES = 5;
+/* 障害物（トゲ）の情報を管理する構造体 */
 struct Obstacle {
-    float x, y;
-    float oldX, oldY;
-    float speed;
-    int type; 
-    bool active;
-    bool passed; 
+    float x, y;       // トゲの座標
+    float oldX, oldY; // 差分消去用の過去の座標
+    float speed;      // 迫ってくる速度
+    int type;         // 0=画面右側のトゲ、1=画面左側のトゲ
+    bool active;      // 画面内に存在するか
+    bool passed;      // すでに鳥が通過してスコア加算済みか
 };
 Obstacle obstacles[MAX_OBSTACLES];
 
+/* 描画の負荷を減らすための各種スプライト */
 M5Canvas spikePlayerSprite(&M5.Display);
 M5Canvas spike0Sprite(&M5.Display);
 M5Canvas spike1Sprite(&M5.Display);
@@ -28,9 +31,11 @@ M5Canvas spike1Sprite(&M5.Display);
 /* ---------------------------------------------------------
    SPIKE関係の関数
    --------------------------------------------------------- */
+/* スパイクゲームの初期化処理 */
 void initSpike(bool isRetry) {
     M5.Speaker.stop(0); 
     
+    // 初回起動時のみ「端末を横に向けて」という画像を案内表示する
     if (!isRetry) {
         M5.Display.fillScreen(TFT_BLACK);
         bool drawSuccess = false;
@@ -50,9 +55,11 @@ void initSpike(bool isRetry) {
         M5.Display.setTextColor(TFT_WHITE); M5.Display.setTextSize(4); M5.Display.drawString("Please Rotate Device", M5.Display.width() / 2, imgY + imgH + 30);
         M5.Display.setTextSize(2); M5.Display.drawString("Tap to Continue", M5.Display.width() / 2, imgY + imgH + 80);
 
+        // タップされるまで待機
         while (true) { M5.update(); if (M5.Touch.getCount() > 0) { auto t = M5.Touch.getDetail(); if (t.wasPressed()) { playDecisionSound(); break; } } delay(10); }
     }
 
+    // ゲーム内変数のリセット
     spikePlayerX = M5.Display.width() / 2; 
     oldSpikePlayerX = spikePlayerX;
     spikeVelocity = 0.0f;
@@ -68,6 +75,7 @@ void initSpike(bool isRetry) {
     M5.Display.fillScreen(TFT_BLACK);
     drawTopBar(" <- BACK");
 
+    // 鳥スプライトの生成
     const char* spikePlayerDot[10] = { 
         "....WW....", 
         "...WWWW...", 
@@ -93,6 +101,7 @@ void initSpike(bool isRetry) {
         } 
     }
 
+    // 障害物（トゲ）スプライトの生成
     int spikeW = M5.Display.width() / 2 + 40; 
 
     if (spike0Sprite.width() != spikeW) {
@@ -117,10 +126,12 @@ void initSpike(bool isRetry) {
     }
 }
 
+/* スパイクゲームのメイン処理（毎フレーム呼ばれる） */
 void SPIKE() {
     int muteX = M5.Display.width() - 120;
     int shotX = muteX - 130;
 
+    // ゲームオーバー時の処理
     if (isGameOver) {
         if (M5.Touch.getCount() > 0) {
             auto t = M5.Touch.getDetail();
@@ -130,19 +141,17 @@ void SPIKE() {
                     if (tx >= muteX) toggleMute(); 
                     else if (tx >= shotX && tx < muteX) takeScreenshot();
                     else if (tx < 200) {
-                        playDecisionSound(); 
-                        currentState = STATE_MENU; 
-                        drawMenu(); 
+                        playDecisionSound(); currentState = STATE_MENU; drawMenu(); 
                     }
                 } else { 
-                    playDecisionSound(); 
-                    initSpike(true); 
+                    playDecisionSound(); initSpike(true); // リトライ
                 }
             }
         }
         return; 
     }
 
+    // UI操作の判定
     bool isUI = false;
     if (M5.Touch.getCount() > 0) {
         auto t = M5.Touch.getDetail(); int tx = t.x; int ty = t.y;
@@ -152,20 +161,19 @@ void SPIKE() {
                 if (tx >= muteX) toggleMute(); 
                 else if (tx >= shotX && tx < muteX) takeScreenshot();
                 else if (tx < 200) {
-                    playDecisionSound(); 
-                    currentState = STATE_MENU; 
-                    drawMenu(); 
-                    return; 
+                    playDecisionSound(); currentState = STATE_MENU; drawMenu(); return; 
                 }
             } 
         }
     }
 
+    // ゲームスタート前の待機画面処理
     if (!isSpikeStarted) {
         M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, 72, 52, TFT_BLACK);
         spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
         oldSpikePlayerX = spikePlayerX;
 
+        // "TAP TO START" の文字を横向きに描画
         M5Canvas textSprite(&M5.Display);
         textSprite.setColorDepth(16);
         textSprite.createSprite(250, 40);
@@ -178,11 +186,12 @@ void SPIKE() {
         textSprite.pushRotateZoom(M5.Display.width() / 2, M5.Display.height() / 2, 90.0f, 1.0f, 1.0f);
         textSprite.deleteSprite();
 
+        // 画面タップでゲーム開始
         if (M5.Touch.getCount() > 0 && !isUI) {
             auto t = M5.Touch.getDetail();
             if (t.wasPressed()) {
                 isSpikeStarted = true;
-                spikeVelocity = -8.0f; 
+                spikeVelocity = -8.0f; // 最初のジャンプ
                 playTapSound();
                 M5.Display.fillRect(M5.Display.width() / 2 - 30, M5.Display.height() / 2 - 130, 60, 260, TFT_BLACK);
             }
@@ -190,10 +199,12 @@ void SPIKE() {
         return; 
     }
     
+    // 鳥の重力とジャンプ制御（画面タップ中は上昇、離すと落下）
     if (M5.Touch.getCount() > 0 && !isUI) spikeVelocity += 0.8f; else spikeVelocity -= 0.8f;
     if (spikeVelocity > 10.0f) spikeVelocity = 10.0f; if (spikeVelocity < -10.0f) spikeVelocity = -10.0f;
     spikePlayerX += spikeVelocity;
 
+    // スコアに応じた難易度上昇処理
     int passedCount = score / 100;
     int minDistance = 400 - (passedCount * 15);
     if (minDistance < 150) minDistance = 150; 
@@ -214,6 +225,7 @@ void SPIKE() {
 
     int spikeH = M5.Display.width() / 2 + 40; 
 
+    // 新しい障害物の生成
     if (canSpawn && random(0, 100) < spawnRate) {
         for (int i = 0; i < MAX_OBSTACLES; i++) {
             if (!obstacles[i].active) {
@@ -232,20 +244,24 @@ void SPIKE() {
 
     bool hit = false;
     
+    // 上下の壁への当たり判定（X座標が画面端を超えたか）
     if (spikePlayerX < 25 || spikePlayerX > M5.Display.width() - 25) {
         hit = true;
     }
 
+    // 障害物（トゲ）との当たり判定とスコア加算
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active && obstacles[i].y >= BAR_HEIGHT) {
             float oy = obstacles[i].y;
             
+            // トゲを通り過ぎたらスコア加算
             if (!obstacles[i].passed && oy < spikePlayerY - 30) {
                 obstacles[i].passed = true;
                 score += 100;
                 if (!isMuted) M5.Speaker.tone(1500, 50); 
             }
 
+            // トゲとの衝突判定（三角形の形状に合わせて当たり判定を絞る）
             if (spikePlayerY > oy - 35 && spikePlayerY < oy + 35) {
                 float dx = abs(spikePlayerY - oy);
                 float h = spikeH * (1.0f - (dx / 40.0f)); 
@@ -260,6 +276,7 @@ void SPIKE() {
         }
     }
 
+    // 当たった場合のゲームオーバー演出
     if (hit) {
         isGameOver = true;
         M5.Speaker.stop(0); 
@@ -269,10 +286,11 @@ void SPIKE() {
         spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
         M5.Display.endWrite();
         
-        delay(1500); 
-
+        delay(1500); // 絶望感のタメ
+        
         M5.Display.fillRect(0, BAR_HEIGHT + 1, M5.Display.width(), M5.Display.height() - BAR_HEIGHT - 1, TFT_BLACK); 
         
+        // 横向きゲームオーバー文字の描画
         M5Canvas textSprite(&M5.Display);
         textSprite.setColorDepth(16);
         textSprite.createSprite(400, 200); 
@@ -301,22 +319,24 @@ void SPIKE() {
     }
 
     M5.Display.startWrite();
+    // UI領域（トップバー）にトゲが描画されないようクリッピング
     M5.Display.setClipRect(0, BAR_HEIGHT + 1, M5.Display.width(), M5.Display.height() - BAR_HEIGHT - 1);
 
+    // 障害物の移動と差分描画処理
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             obstacles[i].y -= obstacles[i].speed;
             
             if (obstacles[i].y < BAR_HEIGHT - 100) {
+                // 画面外に消えたら非アクティブにし、残像を完全に消去
                 obstacles[i].active = false;
-                /* 完全に画面外に出る時に、最後の残像を綺麗に消す */
                 if (obstacles[i].type == 0) {
                     M5.Display.fillRect(M5.Display.width() - spikeH, (int)obstacles[i].oldY - 48, spikeH, 95, TFT_BLACK);
                 } else {
                     M5.Display.fillRect(0, (int)obstacles[i].oldY - 48, spikeH, 95, TFT_BLACK);
                 }
             } else {
-                /* 移動した分の「はみ出た残像」だけをピンポイントで黒塗り！ */
+                /* 移動した分の「はみ出た残像」だけを黒塗りしてチラつきを防止（差分更新） */
                 int dy = (int)obstacles[i].oldY - (int)obstacles[i].y;
                 if (dy > 0) {
                     if (obstacles[i].type == 0) {
@@ -333,7 +353,7 @@ void SPIKE() {
         }
     }
 
-    /* 鳥の描画も差分更新にしてチラつきとおさらば！ */
+    /* 鳥の描画も差分更新で滑らかに表示 */
     int diffX = (int)spikePlayerX - (int)oldSpikePlayerX;
     if (diffX > 0) {
         M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, diffX, 50, TFT_BLACK);
@@ -343,6 +363,7 @@ void SPIKE() {
     spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
     oldSpikePlayerX = spikePlayerX;
     
+    // スコアを横向きで画面右上に描画
     M5Canvas scoreSprite(&M5.Display);
     scoreSprite.setColorDepth(16);
     scoreSprite.createSprite(250, 40);
