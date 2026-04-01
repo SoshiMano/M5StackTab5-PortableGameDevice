@@ -89,7 +89,14 @@ void drawGameUI() {
 }
 
 void playerMiss() {
-    lives--; if (lives < 0) { isGameOver = true; playHitSound(); } 
+    lives--; 
+    /* 弾を全部消去する処理を追加したよ♡ */
+    bulletActive = false; 
+    for (int i = 0; i < MAX_ENEMY_BULLETS; i++) {
+        enemyBullets[i].active = false;
+    }
+
+    if (lives < 0) { isGameOver = true; playHitSound(); } 
     else {
         playHitSound(); drawGameUI();
         M5.Display.fillRect(oldPlayerX - playerW / 2, playerY, playerW, playerH, TFT_BLACK);

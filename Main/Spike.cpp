@@ -100,6 +100,7 @@ void initSpike(bool isRetry) {
         spike0Sprite.setColorDepth(16);
         spike0Sprite.createSprite(spikeW, 95);
         spike0Sprite.fillScreen(TFT_BLACK);
+        /* 右壁から突き出るトゲ */
         spike0Sprite.fillTriangle(0, 40, spikeW, 0, spikeW, 80, TFT_RED);
     }
     if (spike1Sprite.width() != spikeW) {
@@ -107,6 +108,7 @@ void initSpike(bool isRetry) {
         spike1Sprite.setColorDepth(16);
         spike1Sprite.createSprite(spikeW, 95);
         spike1Sprite.fillScreen(TFT_BLACK);
+        /* 左壁から突き出るトゲ */
         spike1Sprite.fillTriangle(spikeW, 40, 0, 0, 0, 80, TFT_RED);
     }
 
@@ -116,15 +118,22 @@ void initSpike(bool isRetry) {
 }
 
 void SPIKE() {
+    int muteX = M5.Display.width() - 120;
+    int shotX = muteX - 130;
+
     if (isGameOver) {
         if (M5.Touch.getCount() > 0) {
             auto t = M5.Touch.getDetail();
             if (t.wasPressed()) {
                 int tx = t.x; int ty = t.y;
-                if (ty <= BAR_HEIGHT && tx < 200) { 
-                    playDecisionSound(); 
-                    currentState = STATE_MENU; 
-                    drawMenu(); 
+                if (ty <= BAR_HEIGHT) { 
+                    if (tx >= muteX) toggleMute(); 
+                    else if (tx >= shotX && tx < muteX) takeScreenshot();
+                    else if (tx < 200) {
+                        playDecisionSound(); 
+                        currentState = STATE_MENU; 
+                        drawMenu(); 
+                    }
                 } else { 
                     playDecisionSound(); 
                     initSpike(true); 
@@ -137,19 +146,23 @@ void SPIKE() {
     bool isUI = false;
     if (M5.Touch.getCount() > 0) {
         auto t = M5.Touch.getDetail(); int tx = t.x; int ty = t.y;
-        if (ty <= BAR_HEIGHT && tx < 200) { 
+        if (ty <= BAR_HEIGHT) { 
             isUI = true; 
             if (t.wasPressed()) { 
-                playDecisionSound(); 
-                currentState = STATE_MENU; 
-                drawMenu(); 
-                return; 
+                if (tx >= muteX) toggleMute(); 
+                else if (tx >= shotX && tx < muteX) takeScreenshot();
+                else if (tx < 200) {
+                    playDecisionSound(); 
+                    currentState = STATE_MENU; 
+                    drawMenu(); 
+                    return; 
+                }
             } 
         }
     }
 
     if (!isSpikeStarted) {
-        M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, 70, 50, TFT_BLACK);
+        M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, 72, 52, TFT_BLACK);
         spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
         oldSpikePlayerX = spikePlayerX;
 
@@ -199,6 +212,8 @@ void SPIKE() {
         }
     }
 
+    int spikeH = M5.Display.width() / 2 + 40; 
+
     if (canSpawn && random(0, 100) < spawnRate) {
         for (int i = 0; i < MAX_OBSTACLES; i++) {
             if (!obstacles[i].active) {
@@ -207,12 +222,14 @@ void SPIKE() {
                 obstacles[i].type = random(0, 2);
                 obstacles[i].y = M5.Display.height() + 50; 
                 obstacles[i].speed = currentSpikeSpeed; 
+                obstacles[i].x = (obstacles[i].type == 0) ? M5.Display.width() - spikeH : 0;
+                obstacles[i].oldX = obstacles[i].x;
+                obstacles[i].oldY = obstacles[i].y;
                 break;
             }
         }
     }
 
-    int spikeH = M5.Display.width() / 2 + 40; 
     bool hit = false;
     
     if (spikePlayerX < 25 || spikePlayerX > M5.Display.width() - 25) {
@@ -221,7 +238,6 @@ void SPIKE() {
 
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active && obstacles[i].y >= BAR_HEIGHT) {
-            float ox = (obstacles[i].type == 0) ? M5.Display.width() - spikeH : spikeH;
             float oy = obstacles[i].y;
             
             if (!obstacles[i].passed && oy < spikePlayerY - 30) {
@@ -293,14 +309,23 @@ void SPIKE() {
             
             if (obstacles[i].y < BAR_HEIGHT - 100) {
                 obstacles[i].active = false;
-            } else {
-                int clearW = 100;
+                /* 完全に画面外に出る時に、最後の残像を綺麗に消す */
                 if (obstacles[i].type == 0) {
-                    M5.Display.fillRect((int)obstacles[i].oldX - 50, (int)obstacles[i].oldY - 40, clearW, 80, TFT_BLACK);
-                    spike0Sprite.pushSprite(M5.Display.width() - spikeH, (int)obstacles[i].y - 40);
+                    M5.Display.fillRect(M5.Display.width() - spikeH, (int)obstacles[i].oldY - 48, spikeH, 95, TFT_BLACK);
                 } else {
-                    M5.Display.fillRect((int)obstacles[i].oldX - 50, (int)obstacles[i].oldY - 40, clearW, 80, TFT_BLACK);
-                    spike1Sprite.pushSprite(0, (int)obstacles[i].y - 40);
+                    M5.Display.fillRect(0, (int)obstacles[i].oldY - 48, spikeH, 95, TFT_BLACK);
+                }
+            } else {
+                /* 移動した分の「はみ出た残像」だけをピンポイントで黒塗り！ */
+                int dy = (int)obstacles[i].oldY - (int)obstacles[i].y;
+                if (dy > 0) {
+                    if (obstacles[i].type == 0) {
+                        M5.Display.fillRect(M5.Display.width() - spikeH, (int)obstacles[i].y - 48 + 95, spikeH, dy, TFT_BLACK);
+                        spike0Sprite.pushSprite(M5.Display.width() - spikeH, (int)obstacles[i].y - 48);
+                    } else {
+                        M5.Display.fillRect(0, (int)obstacles[i].y - 48 + 95, spikeH, dy, TFT_BLACK);
+                        spike1Sprite.pushSprite(0, (int)obstacles[i].y - 48);
+                    }
                 }
                 obstacles[i].oldX = obstacles[i].x;
                 obstacles[i].oldY = obstacles[i].y;
@@ -308,7 +333,13 @@ void SPIKE() {
         }
     }
 
-    M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, 70, 50, TFT_BLACK);
+    /* 鳥の描画も差分更新にしてチラつきとおさらば！ */
+    int diffX = (int)spikePlayerX - (int)oldSpikePlayerX;
+    if (diffX > 0) {
+        M5.Display.fillRect((int)oldSpikePlayerX - 35, (int)spikePlayerY - 25, diffX, 50, TFT_BLACK);
+    } else if (diffX < 0) {
+        M5.Display.fillRect((int)spikePlayerX - 35 + 70, (int)spikePlayerY - 25, -diffX, 50, TFT_BLACK);
+    }
     spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
     oldSpikePlayerX = spikePlayerX;
     
