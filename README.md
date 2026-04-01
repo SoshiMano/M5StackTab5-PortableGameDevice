@@ -142,8 +142,8 @@ flowchart TD
 
 ## プレイデモ
 
-<video src="https://github.com/SoshiMano/M5StackTab5-PortableGameDevice/blob/main/PlayDemo_Invader.mp4" width="320" height="240" controls></video>
+<video src="PlayDemo_Invader.mp4" width="320" height="240" controls></video>
 
-<video src="https://github.com/SoshiMano/M5StackTab5-PortableGameDevice/blob/main/PlayDemo_Spike.mp4" width="320" height="240" controls></video>
+<video src="PlayDemo_Spike.mp4" width="320" height="240" controls></video>
 
 
