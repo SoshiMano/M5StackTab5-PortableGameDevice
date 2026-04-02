@@ -1,5 +1,7 @@
 #include "Invader.h"
 
+extern void updateGameLEDs(); // Main.inoのLED更新関数を使うための宣言を追加
+
 /* ---------------------------------------------------------
    ステージ・進行管理用の変数（インベーダー専用）
    --------------------------------------------------------- */
@@ -96,6 +98,7 @@ void drawGameUI() {
 /* プレイヤーが被弾した際の処理 */
 void playerMiss() {
     lives--; 
+    triggerLEDEffect(3); // 被弾時に赤くチカチカ(EFFECT_PLAYER_HIT)
     
     /* 1. 全ての弾の描画を画面から消去する */
     if (bulletActive) {
@@ -126,7 +129,13 @@ void playerMiss() {
         playerX = M5.Display.width() / 2; 
         oldPlayerX = playerX;
         playerSprite.pushSprite(playerX - playerW / 2, playerY);
-        delay(1000); // 被弾後のウェイト
+        
+        // LEDを更新しながら1秒待機する処理
+        unsigned long waitStart = millis();
+        while (millis() - waitStart < 1000) {
+            updateGameLEDs();
+            delay(10);
+        }
     }
 }
 
@@ -260,6 +269,7 @@ void INVADER() {
                         if (bulletX >= enemies[r][c].x && bulletX <= enemies[r][c].x + ENEMY_W && bulletY >= enemies[r][c].y && bulletY <= enemies[r][c].y + ENEMY_H) { 
                             enemies[r][c].alive = false; enemiesRemaining--; bulletActive = false; hasHit = true; 
                             score += 100; drawGameUI(); playHitSound(); 
+                            triggerLEDEffect(2); // 敵撃墜時に緑くチカチカ(EFFECT_ENEMY_HIT)
                             M5.Display.fillRect(enemies[r][c].x, enemies[r][c].y, ENEMY_W, ENEMY_H, TFT_BLACK); 
                             break; 
                         } 
@@ -357,6 +367,7 @@ void INVADER() {
             // 短いタップ（リリース時に弾を発射）
             if (t.wasReleased() && millis() - touchStartTime < 200 && !bulletActive) { 
                 bulletActive = true; bulletX = playerX; bulletY = playerY - 10; playShootSound(); 
+                triggerLEDEffect(1); // 弾発射時に白く一瞬光る(EFFECT_SHOOT)
             }
         }
         // トップバーの操作判定

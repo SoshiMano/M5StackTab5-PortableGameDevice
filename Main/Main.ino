@@ -1,6 +1,7 @@
 /* M5Stackの基本機能とSDカード用のライブラリを読み込む */
 #include <M5Unified.h>
 #include <SD.h>
+#include <FastLED.h> // WS2812Bを制御するためのライブラリ
 #include "Invader.h"
 #include "Spike.h"
 
@@ -47,6 +48,117 @@ size_t size_gameover = 0;
 
 bool isMuted = false;            // ミュート状態かどうかのフラグ
 int currentVolume = 128;         // 現在の音量
+
+/* ---------------------------------------------------------
+   LED（WS2812B）制御用の設定
+   --------------------------------------------------------- */
+#define NUM_LEDS 8        // 接続しているLEDの数
+#define LED_PIN 0         // 制御ピン（G0）
+
+CRGB leds[NUM_LEDS];
+unsigned long lastLedToggle = 0;
+int ledPattern = 0; // 点灯パターンの状態管理
+
+// LEDの初期化関数
+void initLEDs() {
+    // FastLEDライブラリを使ってWS2812Bの制御設定を行う
+    FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.setBrightness(15); // 明るさ（0〜255）
+    FastLED.clear();
+    FastLED.show();
+}
+
+// メインメニュー用のLED点滅処理関数
+void updateMenuLEDs() {
+    // 500ミリ秒ごとに点灯パターンを切り替える
+    if (millis() - lastLedToggle > 500) {
+        lastLedToggle = millis();
+        ledPattern = !ledPattern;
+        for (int i = 0; i < NUM_LEDS; i++) {
+            // インデックスが偶数か奇数かでON/OFFを分ける（1つおき）
+            if (i % 2 == ledPattern) {
+                leds[i] = CRGB(0, 255, 255); // 点灯する色（ここではシアン/水色）
+            } else {
+                leds[i] = CRGB::Black;       // 消灯
+            }
+        }
+        FastLED.show(); // 設定した色をLEDに反映
+    }
+}
+
+// ゲーム開始時などにLEDを全て消灯する関数
+void turnOffLEDs() {
+    FastLED.clear();
+    FastLED.show();
+}
+
+/* ---------------------------------------------------------
+   ゲーム中のLEDエフェクト管理
+   --------------------------------------------------------- */
+enum LEDEffect {
+    EFFECT_NONE = 0,
+    EFFECT_SHOOT = 1,
+    EFFECT_ENEMY_HIT = 2,
+    EFFECT_PLAYER_HIT = 3
+};
+
+LEDEffect currentEffect = EFFECT_NONE;
+unsigned long effectStartTime = 0;
+
+// 他のファイル（Invader.cpp等）からエフェクトを発火させる関数
+void triggerLEDEffect(int effect) {
+    currentEffect = (LEDEffect)effect;
+    effectStartTime = millis();
+}
+
+// ゲーム中に毎フレーム呼ばれて、LEDの状態を更新する関数
+void updateGameLEDs() {
+    if (currentEffect == EFFECT_NONE) return;
+    
+    unsigned long elapsed = millis() - effectStartTime;
+    
+    switch (currentEffect) {
+        case EFFECT_SHOOT:
+            // 一瞬（50ms）白く光る
+            if (elapsed < 50) {
+                for(int i = 0; i < NUM_LEDS; i++) leds[i] = CRGB::White;
+            } else {
+                FastLED.clear();
+                currentEffect = EFFECT_NONE;
+            }
+            break;
+            
+        case EFFECT_ENEMY_HIT:
+            // 緑にチカチカ (300ms間、50ms周期)
+            if (elapsed < 300) {
+                if ((elapsed / 50) % 2 == 0) {
+                    for(int i = 0; i < NUM_LEDS; i++) leds[i] = CRGB::Green;
+                } else {
+                    FastLED.clear();
+                }
+            } else {
+                FastLED.clear();
+                currentEffect = EFFECT_NONE;
+            }
+            break;
+            
+        case EFFECT_PLAYER_HIT:
+            // 赤にチカチカ (600ms間、50ms周期)
+            if (elapsed < 600) {
+                if ((elapsed / 50) % 2 == 0) {
+                    for(int i = 0; i < NUM_LEDS; i++) leds[i] = CRGB::Red;
+                } else {
+                    FastLED.clear();
+                }
+            } else {
+                FastLED.clear();
+                currentEffect = EFFECT_NONE;
+            }
+            break;
+    }
+    FastLED.show();
+}
+
 
 /* ---------------------------------------------------------
    共通関数（音声再生）
@@ -190,7 +302,12 @@ void drawMenu() {
 /* メニュー画面のタッチ判定と処理 */
 void MAINMENU() {
     // BGMのループ再生
-    if (wav_buffer != nullptr && !M5.Speaker.isPlaying(0) && !isMuted) { M5.Speaker.playWav(wav_buffer, wav_size, ~0u, 0); }
+    if (wav_buffer != nullptr && !M5.Speaker.isPlaying(0) && !isMuted) { 
+        M5.Speaker.playWav(wav_buffer, wav_size, ~0u, 0); 
+    }
+    
+    // メニュー画面にいる間、LEDを点滅させる
+    updateMenuLEDs();
     
     // タッチ入力の処理
     if (M5.Touch.getCount() > 0) {
@@ -210,11 +327,13 @@ void MAINMENU() {
                 if (tx >= BUTTON_X && tx <= BUTTON_X + BUTTON_WIDTH) {
                     if (ty >= 200 && ty <= 200 + BUTTON_HEIGHT) { 
                         isBtn = true; playDecisionSound(); 
+                        turnOffLEDs(); // ゲーム開始前にLEDを全消灯
                         currentStage = 1; score = 0; lives = 2; 
                         currentState = STATE_INVADER; initInvader(); 
                     }
                     else if (ty >= 450 && ty <= 450 + BUTTON_HEIGHT) { 
                         isBtn = true; playDecisionSound(); 
+                        turnOffLEDs(); // ゲーム開始前にLEDを全消灯
                         currentState = STATE_SPIKE; initSpike(); 
                     }
                 }
@@ -230,6 +349,10 @@ void MAINMENU() {
 void setup() {
     // M5Stackの初期化と音量設定
     auto cfg = M5.config(); M5.begin(cfg); M5.Display.setRotation(0); M5.Speaker.setVolume(currentVolume);
+    
+    // LEDの初期化
+    initLEDs();
+    
     drawLoadingScreen("Now Loading...");
     
     // SDカードから音声ファイルを読み込む
@@ -253,8 +376,8 @@ void loop() {
     // 現在のステート（画面状態）に応じて各処理を呼び出す
     switch (currentState) {
         case STATE_MENU: MAINMENU(); break;
-        case STATE_INVADER: INVADER(); break;
-        case STATE_SPIKE: SPIKE(); break;
+        case STATE_INVADER: INVADER(); updateGameLEDs(); break;
+        case STATE_SPIKE: SPIKE(); updateGameLEDs(); break;
     }
     delay(10);
 }

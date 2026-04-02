@@ -33,6 +33,10 @@ extern void playDecisionSound();
 extern void drawMenu();
 extern void drawLoadingScreen(const char* message);
 
+/* LED制御関数の宣言を追加 */
+extern void triggerLEDEffect(int effect);
+extern void updateGameLEDs();
+
 /* インベーダー専用の関数の宣言 */
 void initInvader();
 void INVADER();

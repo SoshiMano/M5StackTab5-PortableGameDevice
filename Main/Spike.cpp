@@ -1,6 +1,9 @@
 #include "Spike.h"
 #include <SD.h>
 
+extern void triggerLEDEffect(int effect);
+extern void updateGameLEDs();
+
 /* ---------------------------------------------------------
    スパイク（SPIKE）ゲーム用の変数
    --------------------------------------------------------- */
@@ -259,6 +262,9 @@ void SPIKE() {
                 obstacles[i].passed = true;
                 score += 100;
                 if (!isMuted) M5.Speaker.tone(1500, 50); 
+                
+                // ▼ここに追加：スコアした時に一瞬白く光らせる！
+                triggerLEDEffect(1);
             }
 
             // トゲとの衝突判定（三角形の形状に合わせて当たり判定を絞る）
@@ -282,11 +288,19 @@ void SPIKE() {
         M5.Speaker.stop(0); 
         playSpikeHitSound(); 
         
+        // ▼ここに追加：ゲームオーバー時に赤くチカチカさせる！
+        triggerLEDEffect(3);
+        
         M5.Display.startWrite();
         spikePlayerSprite.pushSprite((int)spikePlayerX - 35, (int)spikePlayerY - 25);
         M5.Display.endWrite();
         
-        delay(1500); // 絶望感のタメ
+        // ▼ここを変更：LEDを更新しながら1.5秒待機する
+        unsigned long waitStart = millis();
+        while (millis() - waitStart < 1500) {
+            updateGameLEDs();
+            delay(10);
+        }
         
         M5.Display.fillRect(0, BAR_HEIGHT + 1, M5.Display.width(), M5.Display.height() - BAR_HEIGHT - 1, TFT_BLACK); 
         

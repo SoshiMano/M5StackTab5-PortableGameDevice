@@ -13,6 +13,10 @@ extern bool isMuted;
 extern void playTapSound();
 extern void playSpikeHitSound();
 
+/* LED制御関数の宣言を追加 */
+extern void triggerLEDEffect(int effect);
+extern void updateGameLEDs();
+
 /* スパイク専用の関数の宣言 */
 void initSpike(bool isRetry = false);
 void SPIKE();
