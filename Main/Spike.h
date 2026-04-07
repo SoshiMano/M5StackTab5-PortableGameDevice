@@ -16,6 +16,7 @@ extern void playSpikeHitSound();
 /* LED制御関数の宣言を追加 */
 extern void triggerLEDEffect(int effect);
 extern void updateGameLEDs();
+extern void showHeightLED(float current, float max_val); // 鳥の高さに合わせてLEDを光らせる関数
 
 /* スパイク専用の関数の宣言 */
 void initSpike(bool isRetry = false);

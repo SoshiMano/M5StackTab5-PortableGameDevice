@@ -1,3 +1,4 @@
+
 /* M5Stackの基本機能とSDカード用のライブラリを読み込む */
 #include <M5Unified.h>
 #include <SD.h>
@@ -63,7 +64,7 @@ int ledPattern = 0; // 点灯パターンの状態管理
 void initLEDs() {
     // FastLEDライブラリを使ってWS2812Bの制御設定を行う
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-    FastLED.setBrightness(15); // 明るさ（0〜255）
+    FastLED.setBrightness(15); // 明るさ（0〜255）※アストのおねがいで15に変更
     FastLED.clear();
     FastLED.show();
 }
@@ -155,10 +156,32 @@ void updateGameLEDs() {
                 currentEffect = EFFECT_NONE;
             }
             break;
+            
+        case EFFECT_NONE:
+            break;
     }
     FastLED.show();
 }
 
+// 鳥の高さに合わせてLEDを1つだけ光らせる関数
+void showHeightLED(float current, float max_val) {
+    // もし赤くチカチカするなどのエフェクト中なら、そっちを優先する！
+    if (currentEffect != EFFECT_NONE) return; 
+
+    FastLED.clear();
+    
+    // 現在位置の割合を計算して、光らせるLEDの番号（0〜7）を決める
+    // ※アストの環境に合わせて上下を反転させる計算に修正！
+    int ledIndex = (int)((1.0f - (current / max_val)) * NUM_LEDS);
+    
+    // 範囲外に行かないように安全対策
+    if (ledIndex < 0) ledIndex = 0;
+    if (ledIndex >= NUM_LEDS) ledIndex = NUM_LEDS - 1;
+    
+    // 鳥のイメージカラーっぽく黄色に光らせる
+    leds[ledIndex] = CRGB::Yellow; 
+    FastLED.show();
+}
 
 /* ---------------------------------------------------------
    共通関数（音声再生）

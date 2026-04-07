@@ -207,6 +207,9 @@ void SPIKE() {
     if (spikeVelocity > 10.0f) spikeVelocity = 10.0f; if (spikeVelocity < -10.0f) spikeVelocity = -10.0f;
     spikePlayerX += spikeVelocity;
 
+    // ▼ ここに追加！ 鳥の現在位置（spikePlayerX）をLEDに送る
+    showHeightLED(spikePlayerX, M5.Display.width());
+
     // スコアに応じた難易度上昇処理
     int passedCount = score / 100;
     int minDistance = 400 - (passedCount * 15);
