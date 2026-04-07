@@ -167,3 +167,14 @@ LEDストリップの制御ピンをM5Stack Tab5のG1ピンに接続し、各ゲ
   - 通常プレイ中: 鳥の現在位置に連動して、8個のLEDのうち該当する高さの1つが黄色く点灯し、デバイスの横でもキャラクターの動きを視覚的に表現する。
   - スコア加算（障害物回避）時: 一瞬全体が白く発光する。
   - 障害物衝突（ゲームオーバー）時: 全体が赤色で激しく点滅(1.5秒間)し、プレイヤーのミスを強調す
+
+## LEDデモ(BGM/SE：魔王魂)
+
+<p align="center" width="100%">
+    <video src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="80%" controls></video>
+</p> 
+
+<p align="center" width="100%">
+    <video src="https://github.com/user-attachments/assets/07c25621-18af-4236-9703-46bf2711c158" width="80%" controls></video>
+</p>    
+
