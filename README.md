@@ -171,7 +171,7 @@ LEDストリップの制御ピンをM5Stack Tab5のG1ピンに接続し、各ゲ
 ## LEDデモ(BGM/SE：魔王魂)
 
 <p align="center" width="100%">
-    <video src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="80%" controls></video>
+    <video src="https://github-production-user-asset-6210df.s3.amazonaws.com/272127778/574453736-323e4e08-25e7-448b-9d70-924b41d27ff9.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260407%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260407T041311Z&X-Amz-Expires=300&X-Amz-Signature=4b7ba6c08ed751ad2af6d8402df672f948aa751357ecae17b628414289d99778&X-Amz-SignedHeaders=host" width="80%" controls></video>
 </p> 
 
 <p align="center" width="100%">
