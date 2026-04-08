@@ -10,6 +10,9 @@ enum SystemState {
     STATE_SPIKE     
 };
 
+// PRの練習用にここにコメント
+// 上のENUMは　別途 main.hを作成してそこで記述して　各ゲームではそのmain.hをインクルードするほうが値の意味や目的を考えると正しそう
+
 /* メインファイル(Main.ino)で定義されている変数の宣言（externを利用して共有） */
 extern SystemState currentState;
 extern int score;
