@@ -103,7 +103,7 @@ flowchart TD
 ```
 #### プレイデモ(BGM/SE：魔王魂)
 <p align="center" width="100%">
-    <video srchttps://github.com/user-attachments/assets/4de490c5-7b20-4c75-9edd-da17d3e3db67" width="80%" controls></video>
+    <video src="https://github.com/user-attachments/assets/4de490c5-7b20-4c75-9edd-da17d3e3db67" width="80%" controls></video>
 </p>    
 
 ### SPIKE
