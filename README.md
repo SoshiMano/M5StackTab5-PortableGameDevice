@@ -101,6 +101,12 @@ flowchart TD
     GameOver --> Result[スコア表示]
     Result --> Title
 ```
+#### プレイデモ(BGM/SE：魔王魂)
+
+<p align="center" width="100%">
+    <video srchttps://github.com/user-attachments/assets/4de490c5-7b20-4c75-9edd-da17d3e3db67*" width="80%" controls></video>
+</p>    
+
 ### SPIKE
 
 ![SPIKE](SS_SPIKE.jpeg)
@@ -131,6 +137,11 @@ flowchart TD
     GameOver --> Result[スコア表示]
     Result --> Title
 ```
+#### プレイデモ(BGM/SE：魔王魂)
+
+<p align="center" width="100%">
+    <video src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="80%" controls></video>
+</p> 
 
 ## ディレクトリ・ファイル構成
 
@@ -139,16 +150,6 @@ flowchart TD
 - `Main.ino` : システムの初期化、メインループ、メニュー画面UI、音声・画像等の共通処理。
 - `Invader.h` / `Invader.cpp` : 『INVADER』のゲームロジックおよび描画処理。
 - `Spike.h` / `Spike.cpp` : 『SPIKE』のゲームロジックおよび描画処理.。
-
-## プレイデモ(BGM/SE：魔王魂)
-
-<p align="center" width="100%">
-    <video src="https://github.com/user-attachments/assets/85ce7aaa-d420-4067-ad82-a9aa3690278d" width="80%" controls></video>
-</p>    
-
-<p align="center" width="100%">
-    <video src="https://github.com/user-attachments/assets/d77e346c-42fb-48f9-8fb3-d69149909ff4" width="80%" controls></video>
-</p> 
 
 ## Extra: WS2812 RGB 8 LEDストリップによる演出システム
 
@@ -172,5 +173,8 @@ LEDストリップの制御ピンをM5Stack Tab5のG1ピンに接続し、各ゲ
 
 <p align="center" width="100%">
     <video src="https://github.com/user-attachments/assets/07c25621-18af-4236-9703-46bf2711c158" width="80%" controls></video>
+</p>    
+<p align="center" width="100%">
+    <video src="https://github.com/user-attachments/assets/8c75869c-1b3f-4033-9a9c-9a80ebcfe0fc" width="80%" controls></video>
 </p>    
 
