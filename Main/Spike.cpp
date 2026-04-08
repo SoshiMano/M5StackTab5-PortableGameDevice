@@ -207,7 +207,7 @@ void SPIKE() {
     if (spikeVelocity > 10.0f) spikeVelocity = 10.0f; if (spikeVelocity < -10.0f) spikeVelocity = -10.0f;
     spikePlayerX += spikeVelocity;
 
-    // ▼ ここに追加！ 鳥の現在位置（spikePlayerX）をLEDに送る
+    // 鳥の現在位置（spikePlayerX）をLEDに送る
     showHeightLED(spikePlayerX, M5.Display.width());
 
     // スコアに応じた難易度上昇処理
@@ -266,7 +266,7 @@ void SPIKE() {
                 score += 100;
                 if (!isMuted) M5.Speaker.tone(1500, 50); 
                 
-                // ▼ここに追加：スコアした時に一瞬白く光らせる！
+                // ▼ここに追加：スコアした時に一瞬白く光らせる
                 triggerLEDEffect(1);
             }
 
@@ -291,7 +291,7 @@ void SPIKE() {
         M5.Speaker.stop(0); 
         playSpikeHitSound(); 
         
-        // ▼ここに追加：ゲームオーバー時に赤くチカチカさせる！
+        // ▼ここに追加：ゲームオーバー時に赤くチカチカさせる
         triggerLEDEffect(3);
         
         M5.Display.startWrite();

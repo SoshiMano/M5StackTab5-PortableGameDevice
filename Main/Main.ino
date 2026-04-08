@@ -5,6 +5,7 @@
 #include <FastLED.h> // WS2812Bを制御するためのライブラリ
 #include "Invader.h"
 #include "Spike.h"
+#include "Main.h"
 
 /* ---------------------------------------------------------
    ゲームの状態管理
@@ -64,7 +65,8 @@ int ledPattern = 0; // 点灯パターンの状態管理
 void initLEDs() {
     // FastLEDライブラリを使ってWS2812Bの制御設定を行う
     FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-    FastLED.setBrightness(15); // 明るさ（0〜255）※アストのおねがいで15に変更
+    FastLED.setBrightness(15); // 明るさ（0〜255）
+
     FastLED.clear();
     FastLED.show();
 }
@@ -96,12 +98,6 @@ void turnOffLEDs() {
 /* ---------------------------------------------------------
    ゲーム中のLEDエフェクト管理
    --------------------------------------------------------- */
-enum LEDEffect {
-    EFFECT_NONE = 0,
-    EFFECT_SHOOT = 1,
-    EFFECT_ENEMY_HIT = 2,
-    EFFECT_PLAYER_HIT = 3
-};
 
 LEDEffect currentEffect = EFFECT_NONE;
 unsigned long effectStartTime = 0;
@@ -165,13 +161,12 @@ void updateGameLEDs() {
 
 // 鳥の高さに合わせてLEDを1つだけ光らせる関数
 void showHeightLED(float current, float max_val) {
-    // もし赤くチカチカするなどのエフェクト中なら、そっちを優先する！
+    // もし赤くチカチカするなどのエフェクト中なら、そっちを優先する
     if (currentEffect != EFFECT_NONE) return; 
 
     FastLED.clear();
     
     // 現在位置の割合を計算して、光らせるLEDの番号（0〜7）を決める
-    // ※アストの環境に合わせて上下を反転させる計算に修正！
     int ledIndex = (int)((1.0f - (current / max_val)) * NUM_LEDS);
     
     // 範囲外に行かないように安全対策
